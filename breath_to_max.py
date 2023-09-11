@@ -23,7 +23,7 @@ To run the program
 To receive data in MaxMSP
 
     - create a "udpreceive 7400" object
-    - link its output to a message's right input 
+    - link its output to a message's input 
   
 '''
 import signal
@@ -38,10 +38,16 @@ port = 7400         # port to be used in the "updreceive" object in MaxMSP
 client = udp_client.SimpleUDPClient(ip, port)
 
 def cleanup(signum, frame):
+    gdx.stop()
+    gdx.close()
     quit()
     
 signal.signal(signal.SIGINT, cleanup)  # pressing CTRL_C will execute cleanup() 
 
+# open a connection with the sensor.
+# connection = 'ble' for bluetooth (wireless)
+# connection = 'usb' for usb (connection with a cable)
+# experience has shown that the USB connection is more reliable than Bluetooth.
 gdx.open(connection='ble', device_to_open="GDX-RB 0K4000J6")  # 'usb' for usb, 'ble' for bluetooth
 gdx.select_sensors([2])     # measurement #1 is force in N, measurment #2 is respiration in bpm
 gdx.start(1000)             # measurement frequency 1 Hz (1000 ms)
@@ -54,9 +60,6 @@ gdx.read()[0]               # skip first measure which seems to be wrong sometim
 
 while True:
     value = gdx.read()[0]
-    if math.isnan(value):
+    if math.isnan(value):   # ignore nan
         continue
     client.send_message("/freq", value)
-
-gdx.stop()
-gdx.close()
