@@ -1,16 +1,24 @@
 ''' 
-showbreath.py
+gdxrb_to_console.py
 author: Vincent Lacasse
 date: 2023-04-28
 
 This program extract respiration frequency in breath per minute from
-a Vernier GDX-RB sensor
+a Vernier GDX-RB sensor, and shows data ton the console
 
 Installation
-  On OSX, open a terminal and execute the following commands
+  Prior to running this program, some python module must be installed.
+  On macOS, open a terminal and execute the following commands
   
   $ pip3 install godirect
   
+  Also, the running directory must contain the gdx/ directory 
+  provided by Vernier.
+
+To run the program
+  
+  $ python3 gdxrb_to_console.py
+
 '''
 import signal
 import math
@@ -34,7 +42,7 @@ gdx.read()[0]               # skip first measure which seems to be wrong sometim
 
 while True:
     value = gdx.read()[0]
-    if math.isnan(value):
+    if math.isnan(value):   # value is return as NAN when invalid. This line remove NAN data points
         continue
     print(value)
 
