@@ -18,7 +18,7 @@ Installation
 
 To run the program
   
-  $ python3 vernier_to_max.py
+  $ python3 gdxrb_to_max.py
 
 To receive data in MaxMSP
 
@@ -77,4 +77,4 @@ while True:
     value = gdx.read()[0]
     if math.isnan(value):   # ignore NAN data points
         continue
-    client.send_message("/freq", value) 
+    client.send_message("/frequency", value) 

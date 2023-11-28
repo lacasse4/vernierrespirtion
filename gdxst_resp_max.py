@@ -1,10 +1,10 @@
 ''' 
-Program: gdxst_respiration.py
+Program: gdxst_resp_to_max.py
 Author: Vincent Lacasse
 Date: 2023-11-14
 
 This program extract respiration frequency in breath per minute (bpm)
-from a Vernier GDX-ST sensor and prints it to the console.
+from a Vernier GDX-ST sensor and sends it to MaxMSP via OSC.
 
 Installation
   Prior to running this program, some python module must be installed.
@@ -12,20 +12,27 @@ Installation
   
   $ pip3 install godirect
   $ pip3 install numpy
+  $ pip3 install python-osc
   
   Also, the running directory must contain the gdx/ directory 
   provided by Vernier.
 
 To run the program
   
-  $ python3 gdxst_respiration.py
-  
+  $ python3 gdxst_resp_to_max.py
+
+To receive data in MaxMSP
+
+    - create a "udpreceive 7400" object
+    - link its output to a message's input 
+
 '''
 import signal
 import time
 import numpy as np
 import peak as p
 from gdx import gdx
+from pythonosc import udp_client
 
 # define constants
 
@@ -52,6 +59,12 @@ column_headers= gdx.enabled_sensor_info()   # returns a string with sensor descr
 print('\n')
 print(column_headers)
 
+# The udp_client object allow communication with Max (using OSC)
+
+ip = "127.0.0.1"    # loop back.  This script must be run on the same machine as MasMSP
+port = 7400         # port to be used in the "updreceive" object in MaxMSP
+client = udp_client.SimpleUDPClient(ip, port)
+
 # Setup a clean-up function that will be called when CTRL_C is pressed. 
 
 def cleanup(signum, frame):
@@ -71,13 +84,17 @@ counter = 0
 index = 0
 
 while True:
+    value = -1.0
+    
     # get next data point
     temperature_data[index] = gdx.read()[0]
-        
+    
+    # temperature data points are put in the buffer in a wrap around fashion
     index += 1
     if index >= SIGNAL_LENGTH:
         index = 0
-        
+    
+    # compute fft only if there are enough points in buffer
     if counter >= SIGNAL_LENGTH:
         fft = np.fft.rfft(temperature_data)
         spectrum = abs(fft)
@@ -85,13 +102,17 @@ while True:
             
         peak = p.find_peak_with_unit(spectrum, LOWEST_BREATH_FREQ, HIGHEST_BREATH_FREQ, SAMPLES_PER_UNIT)
         if peak.position != -1:
-            print("%5.2f" % (peak.scaled_position * 60), end = '')
-            print("                      ", end='\r')
-        else:
-            print("no breath detected", end = '\r')
+            value = peak.scaled_position * 60;
+
     else:
         counter += 1
-        print("%4d building buffer..." % counter, end = '\r')
+
+    # value is  either
+    #   1) a valid positive value if a frequency between LOWEST_BREATH_FREQ and HIGHEST_BREATH_FREQ was found
+    #   2) -1.0 if no valid frequency was found
+    #   3) -1.0 if not enough data was gathered to compute a fft
+    client.send_message("/frequency", value) 
+
     
 cleanup(0, 0)
     

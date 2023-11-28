@@ -1,29 +1,37 @@
 ''' 
-Program: gdxst_to_console.py
+Program: gdxst_raw_to_max.py
 Author: Vincent Lacasse
-Date: 2023-010-19
+Date: 2023-11-28
 
 This program extract temperature in Celsius
-from a Vernier GDX-ST sensor and prints it to the console
+from a Vernier GDX-ST sensor and sends it to MaxMSP via OSC
 
 Installation
   Prior to running this program, some python module must be installed.
   On macOS, open a terminal and execute the following commands
   
   $ pip3 install godirect
+  $ pip3 install python-osc
   
   Also, the running directory must contain the gdx/ directory 
   provided by Vernier.
 
 To run the program
   
-  $ python3 gdxst_to_console.py
+  $ python3 gdxst_raw_to_max.py
   
+To receive data in MaxMSP
+
+    - create a "udpreceive 7400" object
+    - link its output to a message's input 
+
 '''
 import signal
 import math
 import time
 from gdx import gdx
+from pythonosc import udp_client
+
 
 # The gdx object from Vernier allow communication with the GDX-ST sensor
 
@@ -45,6 +53,12 @@ column_headers= gdx.enabled_sensor_info()   # returns a string with sensor descr
 print('\n')
 print(column_headers)
 
+# The udp_client object allow communication with Max (using OSC)
+
+ip = "127.0.0.1"    # loop back.  This script must be run on the same machine as MasMSP
+port = 7400         # port to be used in the "updreceive" object in MaxMSP
+client = udp_client.SimpleUDPClient(ip, port)
+
 # Setup a clean-up function that will be called when CTRL_C is pressed. 
 
 def cleanup(signum, frame):
@@ -62,4 +76,4 @@ time.sleep(1)
 
 while True:
     value = gdx.read()[0]
-    print(value) 
+    client.send_message("/temperature", value) 
